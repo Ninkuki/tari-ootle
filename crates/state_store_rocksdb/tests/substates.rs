@@ -26,6 +26,7 @@ use tari_ootle_storage::{
         Block,
         SubstateDestroyed,
         SubstateLock,
+        SubstateRecord,
         SubstateTransition,
         SubstateUpdateBatch,
         SubstateValueFilterFlags,
@@ -97,6 +98,25 @@ fn basic_operations() {
         res[0].substate_value.as_ref().unwrap(),
         substate1.substate_value.as_ref().unwrap(),
     );
+
+    // SubstateRecord::get_any / get_all track each versioned requirement independently
+    let (found, missing) = SubstateRecord::get_any(&tx, [
+        VersionedSubstateIdRef::new(&substate1_id, SubstateVersion::ZERO),
+        VersionedSubstateIdRef::new(&substate1_id, SubstateVersion::new(1)),
+        VersionedSubstateIdRef::new(&substate1_id, SubstateVersion::new(2)),
+    ])
+    .unwrap();
+    assert_eq!(found.len(), 2);
+    assert_eq!(
+        missing,
+        HashSet::from([VersionedSubstateId::new(substate1_id.clone(), SubstateVersion::new(2))])
+    );
+    let all_versions = SubstateRecord::get_all(&tx, [
+        VersionedSubstateIdRef::new(&substate1_id, SubstateVersion::ZERO),
+        VersionedSubstateIdRef::new(&substate1_id, SubstateVersion::new(1)),
+    ])
+    .unwrap();
+    assert_eq!(all_versions.len(), 2);
 
     // substates_get_any_max_version
     let substate_ids = vec![substate1_id.clone(), substate2_id.clone()];
